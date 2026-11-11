@@ -1,0 +1,56 @@
+import { AppAuthError, FetchRequestor } from '@openid/appauth';
+// biome-ignore lint/correctness/noUndeclaredDependencies: transitive via @openid/appauth
+import type JQuery from 'jquery';
+
+// Unlike the upstream FetchRequestor, this returns the full response body on 400 or 401 status,
+// which is how RFC 6749 5.2 requires Access Token Error Responses to be sent.
+export default class OauthFetchRequestor extends FetchRequestor {
+  private static toHeaders(settings: JQuery.AjaxSettings) {
+    const newHeaders = new Headers();
+    for (const [key, value] of Object.entries(settings.headers ?? {})) {
+      if (value !== null && value !== undefined) {
+        newHeaders.append(key, value);
+      }
+    }
+    return newHeaders;
+  }
+
+  private static toFormData(settings: JQuery.AjaxSettings): FormData | string | undefined {
+    if (!settings.data) {
+      return undefined;
+    }
+    if (typeof settings.data === 'string') {
+      return settings.data;
+    }
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(settings.data)) {
+      formData.append(key, value);
+    }
+    return formData;
+  }
+
+  public override async xhr<T>(settings: JQuery.AjaxSettings): Promise<T> {
+    if (!settings.url) {
+      throw new AppAuthError('A URL must be provided.');
+    }
+    if (settings.method?.toUpperCase() !== 'POST') {
+      // RFC 6749 3.2: The client MUST use the HTTP "POST" method when making access token
+      // requests.
+      throw new AppAuthError('Only POST is allowed for token requests.');
+    }
+
+    const response = await fetch(settings.url, {
+      method: settings.method,
+      headers: OauthFetchRequestor.toHeaders(settings),
+      body: OauthFetchRequestor.toFormData(settings),
+    });
+    if (response.status >= 500) {
+      throw new AppAuthError(`${response.statusText}: ${await response.text()}`);
+    }
+
+    if (response.headers.get('Content-Type')?.includes('application/json')) {
+      return response.json();
+    }
+    return response.text() as Promise<T>;
+  }
+}

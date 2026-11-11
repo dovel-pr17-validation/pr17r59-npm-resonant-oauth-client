@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // Strictness
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+
+    // Module system
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "verbatimModuleSyntax": true,
+
+    // Output
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM"],
+    "declaration": true,
+    "sourceMap": true,
+    "declarationMap": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Other
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"]
+}
